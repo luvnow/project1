@@ -1,0 +1,585 @@
+---
+title: "week 1 philosophy code version"
+output:
+  html_document:
+    df_print: paged
+---
+# What is interesting about modern philosophy? Specifically, empiricism?
+
+Philosophy, as a discipline that shows people's love for wisdom, has been exuding vigor and vitality for thousands of years. Philosophers think about different questions from different perspectives and give different answers, and various schools of philosophy are born.
+
+In this work, we will focus on modern philosophy. Here is an outline of questions we will talk about.
+
+Q1: Although in a similar historical period, what are the main considerations of different schools of modern philosophy?
+
+Q2: Are the emotions in their works the same? Comparisons between different schools draw our attention to empiricism. Why? 
+
+Q3: All belonging to empiricism, are the emotions in the works of 3 different philosophers the same?
+
+# step 0 - Install and load libraries
+```{r, message=FALSE, warning=FALSE, echo=FALSE, message = FALSE, results='hide'}
+packages.used=c("tm", "wordcloud", "RColorBrewer", "dplyr", "tidytext")
+
+# check packages that need to be installed.
+packages.needed=setdiff(packages.used, 
+                        intersect(installed.packages()[,1], 
+                        packages.used))
+# install additional packages
+if(length(packages.needed)>0){
+  install.packages(packages.needed, dependencies = TRUE,
+                   repos='http://cran.us.r-project.org')
+}
+
+library(tm)
+library(wordcloud)
+library(RColorBrewer)
+library(dplyr)
+library(tidytext)
+library(knitr)
+
+library(ggplot2)
+library(scales)
+library(lubridate)
+library(tidyverse)
+
+library(timelineS)
+
+library(tm)
+library(wordcloud)
+library(RColorBrewer)
+library(dplyr)
+library(tidytext)
+library(knitr)
+
+# load packages
+library("rvest")
+library("tibble")
+library("syuzhet")
+library("sentimentr")
+library("gplots")
+library("dplyr")
+library("tm")
+library("syuzhet")
+library("factoextra")
+library("beeswarm")
+library("scales")
+library("RColorBrewer")
+library("RANN")
+library("tm")
+library("topicmodels")
+library("stringr")
+
+source("../lib/plotstacked.R")
+source("../lib/speechFuncs2.R")
+```
+
+# step 1 - Data Processing
+```{r, fig.height=4, fig.width=6}
+d=read_csv("../data/philosophy_data 2.csv")
+
+df=d%>%
+  group_by(title,author,school,original_publication_date)%>%
+  summarise(sentence_length=sum(sentence_length))%>%
+  arrange(school)
+
+dta <- d%>%
+  group_by(title,author,school,original_publication_date)%>%
+  summarise(length=sum(sentence_length))%>%
+  mutate(year=make_date(original_publication_date, 1, 1),length=length/2500000)%>%
+  select(species=author,year,length,school,title)
+
+#visualize the original_publication_date. Color represents different school
+dta%>%filter(year>as.Date("0/1/1"))%>%  
+  timelineS(main = "Original Publication Date",scale="year",labels=NULL,
+          label.length=.$length,label.color=factor(.$school),label.angle=90)
+
+```
+Data Source: History of Philosophy https://www.kaggle.com/kouroshalizadeh/history-of-philosophy
+Context: Sentences taken from 51 texts spanning the history of philosophy
+
+From the timeline above, it's easy to tell that this dataset primarily contains texts of philosophy after 1600 AD, which are mainly modern philosophy and contemporary philosophy.
+
+In this work, we will focus on modern philosophy.
+
+
+```{r}
+school_first_pub<-# arrange school name by the first year of its publication
+  dta%>%group_by(school)%>%
+  mutate(order=order(year))%>%
+  arrange(order,year)%>%
+  filter(order==1)%>%
+  pull(school)
+  
+sel.comparison= school_first_pub[3:13]
+#doesn't include "aristotle","plato"(BC)
+```
+
+#step 2: Different schools of Philosophy. What were they concerning about?
+
+```{r, fig.height=5, fig.width=8}
+#pull the schools of modern philosophy out
+school_sel <-
+  dta%>%
+  filter(year>as.Date("1400/1/1")&year<as.Date("1840/1/1"))%>%
+  group_by(school)%>%# arrange school name by the first year of its publication
+  mutate(order=order(year))%>%
+  arrange(order,year)%>%
+  filter(order==1)%>%
+  pull(school)
+school_sel<-school_sel[-5] #drop feminism since it was not mainly developed during this period
+
+
+#modern philosophy
+dta%>%filter(year>as.Date("1400/1/1")&year<as.Date("1840/1/1"))%>%
+  timelineS(main = "Main Schools of Modern Philosophy",scale="year",
+            labels=paste0(.$species,"\n  ",.$school),
+          label.length=.$length,label.color=factor(.$school),label.angle=60)
+
+# dta%>%filter(school %in% school_sel)%>%
+#     timelineS(main = "Main Schools of Modern Philosophy",scale="year",labels=paste0(.$species),
+#           label.length=.$length,label.color=factor(.$school),label.angle=60)
+#time span is a little bit different from the last one
+?paste0
+
+```
+
+The 17th and early 20th centuries roughly mark the beginning and the end of modern philosophy. Here we mainly study 4 schools: rationalism, capitalism, empiricism, and German idealism.
+
+```{r}
+#word cloud of different schools
+
+#unique(df$school)
+l<-vector("list",length=length(school_sel))
+
+for(i in 1:length(school_sel)){
+  d_school = d%>%filter(school==school_sel[i])
+  
+  ff.all<-VCorpus(VectorSource(d_school$sentence_lowered))
+  ff.all<-tm_map(ff.all, stripWhitespace)
+  ff.all<-tm_map(ff.all, content_transformer(tolower))
+  ff.all<-tm_map(ff.all, removeWords, stopwords("english"))
+  ff.all<-tm_map(ff.all, removeWords, character(0))
+  ff.all<-tm_map(ff.all, removePunctuation)
+  stop_words_zx<-c("will","may","must","shall","can","also")
+  ff.all<-tm_map(ff.all, removeWords, stop_words_zx)
+  ff.all
+
+  tdm.all<-TermDocumentMatrix(ff.all)
+  tdm.all
+
+  # Turn the Term Document Matrix into a tidy tibble
+  tdm.tidy=tidy(tdm.all)
+  #kable(tdm.tidy[1:10,])
+
+  # Get the Overall Counts over the Whole Corpus
+  tdm.overall=summarise(group_by(tdm.tidy, term), sum(count))
+  #kable(tdm.overall[101:110,])
+  
+  l[[i]]<-tdm.overall # store it in a list
+}
+
+```
+
+## rationalism
+```{r, fig.height=6, fig.width=6}
+  #word cloud
+  wordcloud(l[[1]]$term, l[[1]]$`sum(count)`,
+          scale=c(5,0.5),
+          max.words=100,
+          min.freq=1,
+          random.order=FALSE,
+          rot.per=0.3,
+          random.color=FALSE,
+          colors=brewer.pal(9,"Blues"))
+
+```
+Why did rationalism philosophers talk a lot about "god"? 
+
+Modern philosophy traditionally begins with René Descartes and his dictum "I think, therefore I am".
+Descartes finds that some of the ideas he has could not have originated from him alone, but only from God; he proves that God exists. He then demonstrates that God would not allow him to be systematically deceived about everything; in essence, he vindicates ordinary methods of science and reasoning, as fallible but not false.(Reference: https://en.wikipedia.org/wiki/Modern_philosophy)
+
+So "god" was mentioned a lot.
+
+Some sentences including the keyword "god":
+
+```{r}
+d%>%filter(school==school_sel[1])%>%
+  dplyr::filter(grepl("god",sentence_lowered))%>%
+  select(sentence_lowered)%>%
+  sample_n(2)%>%
+  unlist()
+```
+
+
+## capitalism
+```{r, fig.height=6, fig.width=6}
+  #word cloud
+  wordcloud(l[[2]]$term, l[[2]]$`sum(count)`,
+          scale=c(5,0.5),
+          max.words=100,
+          min.freq=1,
+          random.order=FALSE,
+          rot.per=0.3,
+          random.color=FALSE,
+          colors=brewer.pal(9,"Blues"))
+
+```
+
+Capitalism talks a lot about "price", "money", "value", "labour", "wage", etc. This is corresponding to its key features -- personal ownership of property, open competition, and individual incentives.
+(Reference: https://www.investopedia.com/ask/answers/042215/what-difference-between-capitalist-system-and-free-market-system.asp)
+
+
+```{r}
+d%>%filter(school==school_sel[2])%>%
+  dplyr::filter(grepl("price",sentence_lowered))%>%
+  select(sentence_lowered)%>%
+  sample_n(2)%>%
+  unlist()
+```
+
+
+
+## empiricism
+```{r, fig.height=4, fig.width=4}
+  #word cloud
+  wordcloud(l[[3]]$term, l[[3]]$`sum(count)`,
+          scale=c(5,0.5),
+          max.words=100,
+          min.freq=1,
+          random.order=FALSE,
+          rot.per=0.3,
+          random.color=FALSE,
+          colors=brewer.pal(9,"Blues"))
+
+```
+
+"Ideas": The word cloud helps us get an intuition that "ideas" is an important topic of empiricism. In fact, one thing empiricists cares about is the formation of ideas. Empiricism emphasizes the role of empirical evidence in the formation of ideas, rather than innate ideas or traditions.
+(Reference: https://en.wikipedia.org/wiki/Empiricism)
+
+Some sentences:
+```{r}
+d%>%filter(school==school_sel[3])%>%
+  dplyr::filter(grepl("ideas",sentence_lowered))%>%
+  select(sentence_lowered)%>%
+  sample_n(2)%>%
+  unlist()
+```
+
+
+
+## german idealism
+```{r, fig.height=4, fig.width=4}
+  #word cloud
+  wordcloud(l[[4]]$term, l[[4]]$`sum(count)`,
+          scale=c(5,0.5),
+          max.words=100,
+          min.freq=1,
+          random.order=FALSE,
+          rot.per=0.3,
+          random.color=FALSE,
+          colors=brewer.pal(9,"Blues"))
+
+```
+
+"one", "self", "consciousness", nature"
+
+Idealism asserts that reality is akin to ideas, thought, mind, or selves rather than to material forces. Idealism is a way of interpreting human experience and the world which places emphasis on mind as in some way prior to matter. Just as materialism emphasizes matter, so idealism stresses mind.
+(Reference: http://www.uop.edu.pk/ocontents/IDEALISM%20and%20ITS%20TYPES.pdf)
+
+Some sentences:
+```{r}
+d%>%filter(school==school_sel[4])%>%
+  dplyr::filter(grepl("one",sentence_lowered))%>%
+  select(sentence_lowered)%>%
+  sample_n(2)%>%
+  unlist()
+```
+
+
+
+# Step 3: Are the emotions in their works the same? Seems like "empiricism" has more "disgust".
+```{r, message=FALSE, warning=FALSE}
+# d%>%
+#   filter(school %in% school_sel)%>%
+#   group_by(school)%>%
+#   count() # how many sentences for each school in this database
+set.seed(500)
+sentence.list=NULL
+
+school.speech.list=# group by school,only study schools we are interested in
+    d%>%
+  filter(school %in% school_sel)%>%
+  group_by(school)%>%
+  summarise(fulltext=paste(sentence_spacy,collapse = ''))
+
+
+for(i in 1:nrow(school.speech.list)){
+  sentences=syuzhet::get_sentences(school.speech.list$fulltext[i])
+  if(length(sentences)>0){
+    emotions=matrix(emotion(sentences)$emotion, 
+                    nrow=length(sentences), 
+                    byrow=T)
+    colnames(emotions)=emotion(sentences[1])$emotion_type
+    emotions=data.frame(emotions)
+    emotions=select(emotions,
+                   anticipation,
+                   joy, 
+                   surprise, 
+                   trust, 
+                   anger, 
+                   disgust, 
+                   fear, 
+                   sadness)
+    word.count=f.word_count(sentences)
+    # colnames(emotions)=paste0("emo.", colnames(emotions))
+    # in case the word counts are zeros?
+    # emotions=diag(1/(word.count+0.01))%*%as.matrix(emotions)
+    sentence.list=rbind(sentence.list, 
+                        cbind(school.speech.list[i,-ncol(school.speech.list)],
+                              sentences=as.character(sentences), 
+                              word.count,
+                              emotions,
+                              sent.id=1:length(sentences)
+                              )
+    )
+  }
+}
+
+#save(sentence.list,file="sentence.list.Rdata")
+#names(sentence.list)
+```
+
+```{r}
+sentence.list=
+  sentence.list%>%
+  filter(!is.na(word.count)) 
+```
+
+
+```{r, fig.height=2.5, fig.width=4}
+par(mfrow=c(5,1), mar=c(1,0,2,0), bty="n", xaxt="n", yaxt="n", font.main=1)
+
+for(InFile in school_sel){
+  f.plotsent.len.school(In.list=sentence.list, InFile=InFile)
+}
+
+#nrow(sentence.list%>%filter(school=="rationalism"))
+
+```
+
+From the sentiment analysis, we surprisingly found that compared to the other 3 philosophies, it has more "disgust" emotion. On the contrary, it has less positive emotions such as "anticipation", "joy", "surprise", and "joy".
+
+
+### What are the emotionally charged sentences?
+
+```{r}
+emotions.types=c("anticipation", "joy", "surprise", "trust",
+                 "anger", "disgust", "fear", "sadness")
+i=1
+
+emo_charged_sen<-vector("list",length(school_sel))
+
+for(i in 1:length(school_sel)){
+  speech.df=tibble::as_tibble(sentence.list)%>%
+     filter(school==school_sel[i], word.count>=4)%>%
+  select(sentences, anticipation:sadness)
+  speech.df=tibble::as_tibble(speech.df)
+  emo_charged_sen[[i]]<-as.character(speech.df$sentences[apply(speech.df[,-1], 2, which.max)])
+}
+
+# for(i in 1:length(school_sel)){
+#   print(school_sel[i])
+#   print(emo_charged_sen[[i]])
+# 
+# }
+```
+
+rationalism
+```{r}
+#school_sel[1]
+emo_charged_sen[[1]]
+```
+
+capitalism
+```{r}
+#school_sel[2]
+emo_charged_sen[[2]]
+```
+
+empiricism
+```{r}
+#school_sel[3]
+emo_charged_sen[[3]]
+```
+
+german_idealism
+```{r}
+#school_sel[4]
+emo_charged_sen[[4]]
+
+#Multiple strongest emotions in the same sentence
+```
+
+# Step 4: Pay attention to empiricism, are the emotions in the works of 3 different philosophers the same? Whose work contributes more to the "disgust" emotion?
+
+
+```{r, fig.width=1.5, fig.height=1.5}
+# heatmap.2(cor(sentence.list%>%select(anticipation:sadness)
+#               ), 
+#           scale = "none", 
+#           col = bluered(100), , margin=c(6, 6), key=F,
+#           trace = "none", density.info = "none")
+
+par(mar=c(4, 6, 2, 1))
+emo.means=colMeans(select(sentence.list%>%filter(school=="empiricism"), anticipation:sadness)>0.01)
+col.use=c("darkgoldenrod1", "darkgoldenrod1", "darkgoldenrod1", "darkgoldenrod1",
+            "red2", "chartreuse3", "blueviolet","dodgerblue3")
+barplot(emo.means[order(emo.means)], las=2, col=col.use[order(emo.means)], horiz=T, main="empiricism")
+```
+This result matches our intuition gotten from the above picture -- "disgust" is a major emotion in empiricism' s works. Besides, "surprise", "anger", "joy" also important. So it's look into different authors' works.
+
+```{r, fig.height=4, fig.width=6}
+dta%>%filter(school=="empiricism")%>%
+    timelineS(main = "empiricism",scale="year",labels=.$species,
+          label.length=.$length,label.color=factor(.$species),label.angle=60)
+
+```
+
+```{r,warning=FALSE}
+#different author
+
+author.sentence.list=NULL
+
+
+author.speech.list= # group by school,author,title,only study schools we are interested in
+  d%>%
+  filter(school=="empiricism")%>%
+  group_by(school,author)%>%
+  summarise(fulltext=paste(sentence_spacy,collapse = ''))
+
+i=1
+for(i in 1:nrow(author.speech.list)){
+  sentences=syuzhet::get_sentences(author.speech.list$fulltext[i])
+  if(length(sentences)>0){
+    emotions=matrix(emotion(sentences)$emotion, 
+                    nrow=length(sentences), 
+                    byrow=T)
+    colnames(emotions)=emotion(sentences[1])$emotion_type
+    emotions=data.frame(emotions)
+    emotions=select(emotions,
+                   anticipation,
+                   joy, 
+                   surprise, 
+                   trust, 
+                   anger, 
+                   disgust, 
+                   fear, 
+                   sadness)
+    word.count=f.word_count(sentences)
+    # colnames(emotions)=paste0("emo.", colnames(emotions))
+    # in case the word counts are zeros?
+    # emotions=diag(1/(word.count+0.01))%*%as.matrix(emotions)
+    author.sentence.list=rbind(author.sentence.list, 
+                        cbind(author.speech.list[i,-ncol(author.speech.list)],
+                              sentences=as.character(sentences), 
+                              word.count=word.count,
+                              emotions,
+                              sent.id=1:length(sentences)
+                              )
+    )
+  }
+}
+
+names(author.sentence.list)
+
+
+author.sentence.list=
+  author.sentence.list%>%
+  filter(!is.na(word.count))
+
+author.sentence.list%>%pull(author)%>%unique()
+
+```
+
+
+
+
+
+
+```{r}
+par(mar=c(4, 6, 2, 1))
+emo.means=colMeans(select(author.sentence.list%>%ungroup()%>%filter(author=="Locke" ), anticipation:sadness)>0.01)
+col.use=c("darkgoldenrod1", "darkgoldenrod1", "darkgoldenrod1", "darkgoldenrod1",
+            "red2", "chartreuse3", "blueviolet","dodgerblue3")
+barplot(emo.means[order(emo.means)], las=2, col=col.use[order(emo.means)], horiz=T, main= "Locke")
+```
+
+### What are the emotionally charged sentences?
+
+```{r}
+emotions.types=c("anticipation", "joy", "surprise", "trust",
+                 "anger", "disgust", "fear", "sadness")
+
+tibble::as_tibble(author.sentence.list)%>%
+     filter(author=="Locke", word.count>=4)%>%
+    select(sentences, disgust)%>%
+    dplyr::arrange(desc(disgust))%>%
+    select(sentences)%>%
+    head(n=6)%>%
+  unlist()
+  
+ 
+
+```
+
+
+
+
+```{r}
+par(mar=c(4, 6, 2, 1))
+emo.means=colMeans(select(author.sentence.list%>%ungroup()%>%filter(author=="Berkeley"), anticipation:sadness)>0.01)
+col.use=c("darkgoldenrod1", "darkgoldenrod1", "darkgoldenrod1", "darkgoldenrod1",
+            "red2", "chartreuse3", "blueviolet","dodgerblue3")
+barplot(emo.means[order(emo.means)], las=2, col=col.use[order(emo.means)], horiz=T, main= "Berkeley")
+```
+```{r}
+emotions.types=c("anticipation", "joy", "surprise", "trust",
+                 "anger", "disgust", "fear", "sadness")
+
+tibble::as_tibble(author.sentence.list)%>%
+     filter(author=="Berkeley", word.count>=4)%>%
+    dplyr::arrange(desc(sadness))%>%
+    select(sentences)%>%
+    head(n=6)%>%
+  unlist()
+  
+```
+
+```{r}
+par(mar=c(4, 6, 2, 1))
+emo.means=colMeans(select(author.sentence.list%>%ungroup()%>%filter(author=="Hume"), anticipation:sadness)>0.01)
+col.use=c("darkgoldenrod1", "darkgoldenrod1", "darkgoldenrod1", "darkgoldenrod1",
+            "red2", "chartreuse3", "blueviolet","dodgerblue3")
+barplot(emo.means[order(emo.means)], las=2, col=col.use[order(emo.means)], horiz=T, main= "Hume")
+```
+```{r}
+emotions.types=c("anticipation", "joy", "surprise", "trust",
+                 "anger", "disgust", "fear", "sadness")
+
+tibble::as_tibble(author.sentence.list)%>%
+     filter(author=="Hume", word.count>=4)%>%
+    dplyr::arrange(desc(surprise))%>%
+    select(sentences)%>%
+    head(n=6)%>%
+  unlist()
+```
+
+
+Compare the results of three different philosophers -- Locke, Berkeley and Hume. Locke's work contributes the most to "disgust". 
+
+Surprisingly, the leading emotions of these 3 philosophers are totally different, although they all belong to empiricism. The major emotion of Locke's ideas is "disgust", of Berkeley's is "sad", and of Hume's is surprise.
+
+
+#Conclusion
+In this assignment, we primarily focus on 4 modern philosophy schools --rationalism, capitalism, empirilism, and german idealism. Word cloud helps us identify the key features of each school. Using sentiment analysis, we find compared to the other three schools, empiricism has more "disgust" emotion. Diving into it, this is mainly because of Locke's works. In addition, although all belongs to empiricism, Berkeley's work is m "sadder", and Hume's work has more "surprise".
+
