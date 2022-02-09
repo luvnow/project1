@@ -74,7 +74,7 @@ source("../lib/speechFuncs2.R")
 ```
 
 # step 1 - Data Processing
-```{r, fig.height=4, fig.width=6}
+```{r, fig.height=4, fig.width=6,warning=FALSE}
 d=read_csv("../data/philosophy_data 2.csv")
 
 df=d%>%
@@ -102,7 +102,7 @@ From the timeline above, it's easy to tell that this dataset primarily contains 
 In this work, we will focus on modern philosophy.
 
 
-```{r}
+```{r,warning=FALSE}
 school_first_pub<-# arrange school name by the first year of its publication
   dta%>%group_by(school)%>%
   mutate(order=order(year))%>%
@@ -116,7 +116,7 @@ sel.comparison= school_first_pub[3:13]
 
 #step 2: Different schools of Philosophy. What were they concerning about?
 
-```{r, fig.height=5, fig.width=8}
+```{r, fig.height=5, fig.width=8,warning=FALSE}
 #pull the schools of modern philosophy out
 school_sel <-
   dta%>%
@@ -145,7 +145,7 @@ dta%>%filter(year>as.Date("1400/1/1")&year<as.Date("1840/1/1"))%>%
 
 The 17th and early 20th centuries roughly mark the beginning and the end of modern philosophy. Here we mainly study 4 schools: rationalism, capitalism, empiricism, and German idealism.
 
-```{r}
+```{r,warning=FALSE}
 #word cloud of different schools
 
 #unique(df$school)
@@ -181,7 +181,7 @@ for(i in 1:length(school_sel)){
 ```
 
 ## rationalism
-```{r, fig.height=6, fig.width=6}
+```{r, fig.height=6, fig.width=6,warning=FALSE}
   #word cloud
   wordcloud(l[[1]]$term, l[[1]]$`sum(count)`,
           scale=c(5,0.5),
@@ -202,17 +202,17 @@ So "god" was mentioned a lot.
 
 Some sentences including the keyword "god":
 
-```{r}
-d%>%filter(school==school_sel[1])%>%
+```{r,warning=FALSE}
+print(d%>%filter(school==school_sel[1])%>%
   dplyr::filter(grepl("god",sentence_lowered))%>%
   select(sentence_lowered)%>%
   sample_n(2)%>%
-  unlist()
+  unlist())
 ```
 
 
 ## capitalism
-```{r, fig.height=6, fig.width=6}
+```{r, fig.height=6, fig.width=6,warning=FALSE}
   #word cloud
   wordcloud(l[[2]]$term, l[[2]]$`sum(count)`,
           scale=c(5,0.5),
@@ -229,18 +229,18 @@ Capitalism talks a lot about "price", "money", "value", "labour", "wage", etc. T
 (Reference: https://www.investopedia.com/ask/answers/042215/what-difference-between-capitalist-system-and-free-market-system.asp)
 
 
-```{r}
-d%>%filter(school==school_sel[2])%>%
+```{r,warning=FALSE}
+print(d%>%filter(school==school_sel[2])%>%
   dplyr::filter(grepl("price",sentence_lowered))%>%
   select(sentence_lowered)%>%
   sample_n(2)%>%
-  unlist()
+  unlist())
 ```
 
 
 
 ## empiricism
-```{r, fig.height=4, fig.width=4}
+```{r, fig.height=4, fig.width=4,warning=FALSE}
   #word cloud
   wordcloud(l[[3]]$term, l[[3]]$`sum(count)`,
           scale=c(5,0.5),
@@ -257,18 +257,18 @@ d%>%filter(school==school_sel[2])%>%
 (Reference: https://en.wikipedia.org/wiki/Empiricism)
 
 Some sentences:
-```{r}
-d%>%filter(school==school_sel[3])%>%
+```{r,warning=FALSE}
+print(d%>%filter(school==school_sel[3])%>%
   dplyr::filter(grepl("ideas",sentence_lowered))%>%
   select(sentence_lowered)%>%
   sample_n(2)%>%
-  unlist()
+  unlist())
 ```
 
 
 
 ## german idealism
-```{r, fig.height=4, fig.width=4}
+```{r, fig.height=4, fig.width=4,warning=FALSE}
   #word cloud
   wordcloud(l[[4]]$term, l[[4]]$`sum(count)`,
           scale=c(5,0.5),
@@ -287,12 +287,12 @@ Idealism asserts that reality is akin to ideas, thought, mind, or selves rather 
 (Reference: http://www.uop.edu.pk/ocontents/IDEALISM%20and%20ITS%20TYPES.pdf)
 
 Some sentences:
-```{r}
-d%>%filter(school==school_sel[4])%>%
+```{r,warning=FALSE}
+print(d%>%filter(school==school_sel[4])%>%
   dplyr::filter(grepl("one",sentence_lowered))%>%
   select(sentence_lowered)%>%
   sample_n(2)%>%
-  unlist()
+  unlist())
 ```
 
 
@@ -349,14 +349,14 @@ for(i in 1:nrow(school.speech.list)){
 #names(sentence.list)
 ```
 
-```{r}
+```{r,warning=FALSE}
 sentence.list=
   sentence.list%>%
   filter(!is.na(word.count)) 
 ```
 
 
-```{r, fig.height=2.5, fig.width=4}
+```{r, fig.height=2.5, fig.width=4,warning=FALSE}
 par(mfrow=c(5,1), mar=c(1,0,2,0), bty="n", xaxt="n", yaxt="n", font.main=1)
 
 for(InFile in school_sel){
@@ -372,7 +372,7 @@ From the sentiment analysis, we surprisingly found that compared to the other 3 
 
 ### What are the emotionally charged sentences?
 
-```{r}
+```{r,warning=FALSE}
 emotions.types=c("anticipation", "joy", "surprise", "trust",
                  "anger", "disgust", "fear", "sadness")
 i=1
@@ -395,25 +395,25 @@ for(i in 1:length(school_sel)){
 ```
 
 rationalism
-```{r}
+```{r,warning=FALSE}
 #school_sel[1]
 emo_charged_sen[[1]]
 ```
 
 capitalism
-```{r}
+```{r,warning=FALSE}
 #school_sel[2]
 emo_charged_sen[[2]]
 ```
 
 empiricism
-```{r}
+```{r,warning=FALSE}
 #school_sel[3]
 emo_charged_sen[[3]]
 ```
 
 german_idealism
-```{r}
+```{r,warning=FALSE}
 #school_sel[4]
 emo_charged_sen[[4]]
 
@@ -423,7 +423,7 @@ emo_charged_sen[[4]]
 # Step 4: Pay attention to empiricism, are the emotions in the works of 3 different philosophers the same? Whose work contributes more to the "disgust" emotion?
 
 
-```{r, fig.width=1.5, fig.height=1.5}
+```{r, fig.width=1.5, fig.height=1.5,warning=FALSE}
 # heatmap.2(cor(sentence.list%>%select(anticipation:sadness)
 #               ), 
 #           scale = "none", 
@@ -438,7 +438,7 @@ barplot(emo.means[order(emo.means)], las=2, col=col.use[order(emo.means)], horiz
 ```
 This result matches our intuition gotten from the above picture -- "disgust" is a major emotion in empiricism' s works. Besides, "surprise", "anger", "joy" also important. So it's look into different authors' works.
 
-```{r, fig.height=4, fig.width=6}
+```{r, fig.height=4, fig.width=6,warning=FALSE}
 dta%>%filter(school=="empiricism")%>%
     timelineS(main = "empiricism",scale="year",labels=.$species,
           label.length=.$length,label.color=factor(.$species),label.angle=60)
@@ -506,7 +506,7 @@ author.sentence.list%>%pull(author)%>%unique()
 
 
 
-```{r}
+```{r,warning=FALSE}
 par(mar=c(4, 6, 2, 1))
 emo.means=colMeans(select(author.sentence.list%>%ungroup()%>%filter(author=="Locke" ), anticipation:sadness)>0.01)
 col.use=c("darkgoldenrod1", "darkgoldenrod1", "darkgoldenrod1", "darkgoldenrod1",
@@ -516,7 +516,7 @@ barplot(emo.means[order(emo.means)], las=2, col=col.use[order(emo.means)], horiz
 
 ### What are the emotionally charged sentences?
 
-```{r}
+```{r,warning=FALSE}
 emotions.types=c("anticipation", "joy", "surprise", "trust",
                  "anger", "disgust", "fear", "sadness")
 
@@ -535,14 +535,14 @@ tibble::as_tibble(author.sentence.list)%>%
 
 
 
-```{r}
+```{r,warning=FALSE}
 par(mar=c(4, 6, 2, 1))
 emo.means=colMeans(select(author.sentence.list%>%ungroup()%>%filter(author=="Berkeley"), anticipation:sadness)>0.01)
 col.use=c("darkgoldenrod1", "darkgoldenrod1", "darkgoldenrod1", "darkgoldenrod1",
             "red2", "chartreuse3", "blueviolet","dodgerblue3")
 barplot(emo.means[order(emo.means)], las=2, col=col.use[order(emo.means)], horiz=T, main= "Berkeley")
 ```
-```{r}
+```{r,warning=FALSE}
 emotions.types=c("anticipation", "joy", "surprise", "trust",
                  "anger", "disgust", "fear", "sadness")
 
@@ -555,14 +555,14 @@ tibble::as_tibble(author.sentence.list)%>%
   
 ```
 
-```{r}
+```{r,warning=FALSE}
 par(mar=c(4, 6, 2, 1))
 emo.means=colMeans(select(author.sentence.list%>%ungroup()%>%filter(author=="Hume"), anticipation:sadness)>0.01)
 col.use=c("darkgoldenrod1", "darkgoldenrod1", "darkgoldenrod1", "darkgoldenrod1",
             "red2", "chartreuse3", "blueviolet","dodgerblue3")
 barplot(emo.means[order(emo.means)], las=2, col=col.use[order(emo.means)], horiz=T, main= "Hume")
 ```
-```{r}
+```{r,warning=FALSE}
 emotions.types=c("anticipation", "joy", "surprise", "trust",
                  "anger", "disgust", "fear", "sadness")
 
